@@ -31,7 +31,7 @@ function nanomorph (oldTree, newTree, options) {
   assert.equal(typeof newTree, 'object', 'nanomorph: newTree should be an object')
 
   if (options && options.childrenOnly) {
-    updateChildren(newTree, oldTree)
+    updateChildren(newTree, oldTree, options.skipChildren, options.skipChildrenEnd)
     return oldTree
   }
 
@@ -74,7 +74,7 @@ function getComponentId (node) {
 
 // Update the children of elements
 // (obj, obj) -> null
-function updateChildren (newNode, oldNode) {
+function updateChildren (newNode, oldNode, skipChildren, skipChildrenEnd) {
   // if (DEBUG) {
   //   console.log(
   //   'updateChildren\nold\n  %s\nnew\n  %s',
@@ -83,12 +83,15 @@ function updateChildren (newNode, oldNode) {
   // )
   // }
   var oldChild, newChild, morphed, oldMatch
+  var skipChildren = skipChildren || 0;
+  var skipChildrenEnd = skipChildrenEnd || 0;
+  var endingIndex = oldNode.childNodes.length - skipChildrenEnd;
 
   // The offset is only ever increased, and used for [i - offset] in the loop
   var offset = 0
 
   for (var i = 0; ; i++) {
-    oldChild = oldNode.childNodes[i]
+    oldChild = oldNode.childNodes[i + skipChildren]
     newChild = newNode.childNodes[i - offset]
     // if (DEBUG) {
     //   console.log(
@@ -97,8 +100,13 @@ function updateChildren (newNode, oldNode) {
     //   newChild && newChild.outerHTML
     // )
     // }
+
+    // We've reached skipChildrenEnd, do nothing
+    if (i === endingIndex) {
+      break
+
     // Both nodes are empty, do nothing
-    if (!oldChild && !newChild) {
+    } else if (!oldChild && !newChild) {
       break
 
     // There is no new child, remove old
@@ -124,7 +132,7 @@ function updateChildren (newNode, oldNode) {
       oldMatch = null
 
       // Try and find a similar node somewhere in the tree
-      for (var j = i; j < oldNode.childNodes.length; j++) {
+      for (var j = i + skipChildren; j < oldNode.childNodes.length; j++) {
         if (same(oldNode.childNodes[j], newChild)) {
           oldMatch = oldNode.childNodes[j]
           break
